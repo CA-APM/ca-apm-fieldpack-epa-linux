@@ -1,6 +1,6 @@
 ###
 # EPAgent Plugin Framework Main file
-# @Author -
+# @Author - Srikant Noorani @ CA.com
 ###
 BEGIN {
         $libFolder = $0;

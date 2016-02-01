@@ -1,6 +1,6 @@
 ###
 # EPAgent Plugin Framework Functions file
-# @Author - Srikant @snoorani@empowered.ca
+# @Author Srikant Noorani @ CA.com
 ###
 
 #BEGIN {
