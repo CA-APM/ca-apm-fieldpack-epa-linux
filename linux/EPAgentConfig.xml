@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<EPAPlugins xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
+	<OS Type="Linux">
+		<Metrics>
+			<Metric>
+				<WilyResourceName>Linux Metrics</WilyResourceName>
+				<CommandFile>/opt/EPAgent/epaplugins/linux/linuxMetrics.pl</CommandFile>
+				<Description>All Linux Metrics </Description>
+			</Metric>
+			<Metric>
+				<WilyResourceName>Process</WilyResourceName>
+				<CommandFile>/opt/EPAgent/epaplugins/linux/linuxMetrics.pl</CommandFile>
+				<ProcessNames>srikant,java -Xms</ProcessNames>
+				<Description>Standard Process Metrics - CPU,memory etc </Description>
+			</Metric>
+		</Metrics>
+	</OS>
+</EPAPlugins>

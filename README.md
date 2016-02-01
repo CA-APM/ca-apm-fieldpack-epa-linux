@@ -1,4 +1,4 @@
-#Windows Linux Monitoring (1.0)
+#EPAgent Linux Monitoring (1.0)
 
 ##Description
 This EPAgent field pack provides a mechanism to monitor linux based system. This is a framework where it provides certain routine metrics out of the box and for others provides an easy mechanism to extend either using config file or using your own script
@@ -28,8 +28,11 @@ introscope.epagent.stateful.LINUX.command=perl /opt/EPAgent/epaplugins/linux/EPA
 Plugin requires Perl 5.8 or higher. with following perl modules
 
 -XML::Simple
+
 -Data::Dumper;
+
 -File::Basename
+
 -FindBin
 
 

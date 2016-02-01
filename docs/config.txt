@@ -1,0 +1,149 @@
+
+EPAgent Linux Plugin
+
+
+
+
+
+
+Contents
+Purpose	3
+Assumption	3
+Design Overview	3
+Configuration File:	3
+linuxMetrics.pl:	3
+EPAgentFunctions.pl	4
+EPAgentMain.pl:	4
+The Flow	4
+Deployment and Configuration	4
+Metric Management	5
+Use Case 1- Adding a New Metric	6
+Use Case 2: Adding Delta Metrics	7
+XML Configuration File	7
+
+
+
+Purpose
+	The document details the design and working of Linux EPAgent along with steps required for deployment and metric management.
+Assumption
+-	Knowledge of basic EPAgent working is made as an assumption. Please refer to EPAgent documentation for more information
+-	For EPAgent to work it is assumed that java 1.5 or higher is available along with Perl 5.8 or higher 
+-	Following Perl module dependencies
+o	XML::Simple
+o	Data::Dumper;
+o	File::Basename
+o	FindBin
+-	To deploy this as a service it is assumed that the administrator permission is available.
+Design Overview
+	The overarching consideration is for this script to serve as a reference architecture allowing users to easily extend the script if needed and at the same time be able to add/modify/delete metrics with ease by editing a simple to understand config file. Certain standard metrics like process availability, process memory etc can be configured by specifying the process names in the XML without any need for scripting whereas at the same time the script provides ability to add advance instrumentation by allowing users to create their own script based on their need and publish them using the API provided. The framework also allows users to specify delta metrics i.e. for a metric that is ever increasing counter you can store and retrieve previous value and calculate delta by subtracting with the current value. 
+The following are the four high level components of the framework
+
+Configuration File:
+-	This is an XML file that provides user to specify process metrics for availability, etc and specify user script that needs to be executed for user metrics (see “metricManagement” below for more details).
+linuxMetrics.pl:
+-	User modifiable file that contains functions to publish metrics that users are interested in (see “metricManagement” below for more details).
+	
+
+
+
+EPAgentFunctions.pl: 
+-	EPALinux library and helper functions. Users should not modify this file.
+
+EPAgentMain.pl: 
+-	EPALinux main file that reads the XML file and calls the command file that is specified here. Users should not modify this file.
+-	
+The Flow
+	The plugin follows the standard EPAgent working framework; the plugins are specified in the IntroscopeEPAgent.properties file “introscope.epagent.stateful.FRAMEWORK.command”. The EPAgent runs the specified plugin. The plugin in this case is a perl script (EPAgentMain.pl) that reads the XML file and calls the command file specified in the XML file (<CommandFile> see below). The user is not expected to touch any file except the XML file and any command file specified in the XML file (see below for detail). 
+-	ProcessNames: Specified by <ProcessNames> tag in the XML allows users list comma separate set of process names. The framework will automatically publish process metrics. Metrics like process memory usage, cpu usage, availability etc. This allows the users to hit the ground running quickly if the requirement is simple process metrics. It is users responsibility to provide unique process names.
+-	The command file: Specified by <CommandFile> tag in the XMl allows advance users to write complex logic and publish their own custom metrics in the file specified by the tag. There is a sample “linuxMetrics.pl” file that provides number of example for reference purpose that can be used as a starting point.
+ 
+Based on the above two information the script will publish metrics for all the process names specified in the xml and all the metrics specified by user in the command file.
+Deployment and Configuration
+To deploy follow the steps below
+-	Extract the EPAgentLinux.tar file under /opt ( or any other folder). Ensure you have all the requisite permission. 
+-	Make sure java 1.5 or above is in path.
+-	Open $INSTALL_FOLDER/EPAgent/epaplugins/linux/EPAgentConfig.xml and add processes that you want to monitor under <ProcessNames> tag separate by comma. Make sure processNames can identify the process uniquely.
+-	CommandFile tag represents user file that user can modify and publish EPAgent metrics. By default multiple metrics are already published. Pls refer to metric management section to see how to extend this.
+-	EPAgent can be run either manually by executing “java –jar lib/EPAgent.jar” command from the $INSTALL folder or if installed as a linux service then using the built in Linux service command.
+
+Metric Management
+EPALinux framework allows users to publish metrics two ways – built in process metrics and user defined metrics.
+-	Built-In Process Metrics: User can specify process names in the XML file under ProcessNames tag separate by comma and EPA framework will publish availability, CPU used % and memory used % metrics for those processes. It is user’s responsibility to ensure uniqueness when specifying the process string. For e.g.
+
+<ProcessNames>java -Xms,lib/EPAgent</ProcessNames>
+You can specify any string and can have space in between the string. In the example above internally EPA would run` ps aux |grep –v grep |grep –e “java –Xms” –e “lib/EPAgent”` to get the process information. You can use this to verify your string.
+You can also leave this tag empty and choose to provide a command file that would return a more sophisticated process metrics in which case no default process metrics will be published.
+-	User Defined Metrics: User can specify custom metrics by following the steps below
+o	Specify the file in the commandFile tag (linuxMetrics.pl is already provided with couple of default metrics).
+o	Ensure it has getUserMetrics subroutine this is the interface that framework will call to publish metrics.
+o	Add your subroutine to this interface and publish metrics using the addToResultsSet which in turn calls built in addToResultsSet subroutine.
+
+
+Use Case 1- Adding a New Metric
+
+Here is an example, to add a new metric. There three component to publishing a new metric 
+-	metricPath: Where it gets published in Wily includes metric name
+-	DataType: what data type that metric uses
+-	Value: value of the metric
+
+To publish a metric with metric name “NewMetricPath|MetricPath:NewMetric” and of datatype “longCounter” andwith value 20. Follow these two steps
+
+1.	 open $INSTALL/epaplugins/linux/linuxMetrics.pl and create a new perl soubroutine called say “getMyNewMetrics()”
+
+sub getMyNewMetrics {
+        addToResultsSet ("LongCounter", “NewMetricPath|MetricPath:NewMetric","20");
+}
+2.	call this subroutine from getUserMetrics() Interface in the same file
+
+sub getUserMetrics {
+        getMyNewMetrics(); #This is the new method added 
+}
+
+
+Add as many new metrics sub routine as you want by adding your adding your subroutine in getUserMetrics().
+
+You will notice the metrics get published in Wily under EPAgent under the new metric path specified. 
+
+You can use this approach to publish any kind of metrics into Wily, all you need to do is to call your subroutine, that calls addToResultsSet, from getUserMetrics subroutine.
+
+
+Use Case 2: Adding Delta Metrics
+	If you have an ever increasing counter for which you want to calculate a per interval rate (delta) then the framework allows you to store and retrieve previous values. You can use
+-	To Store Current Value: you can call built in Wily::EPAgentFunctions::storeCurrentValue(“metricPath”, “value”);
+-	To Retrieve Previous Value: that you stored previously use 
+$myPrevValue = Wily::EPAgentFunctions::getPrevValue(“metricPath”);
+
+	The values are stored in a map against the metric path. 
+For your reference a sample getNetworkDeltaMetrics() example is provided in the linuxMetrics.pl file
+
+XML Configuration File
+	Here is the explanation of some of the configuration files
+<EPAPlugins xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
+        <OS Type="Linux" SleepTimeInSec=”15”>
+                <Metrics>
+                        <Metric>
+                                <WilyResourceName>Linux Metrics</WilyResourceName>
+                                <CommandFile>/opt/EPAgent/epaplugins/linux/linuxMetrics.pl</CommandFile>
+                                <Description>All Linux Metrics </Description>
+                        </Metric>
+                        <Metric>
+                                <WilyResourceName>Process</WilyResourceName>
+	               <ProcessNames>java -Xms,lib/EPAgent</ProcessNames>
+                                <CommandFile>/opt/EPAgent/epaplugins/linux/linuxMetrics.pl</CommandFile>
+                                 <Description>Standard Process Metrics - CPU,memory etc </Description>
+                        </Metric>
+                </Metrics>
+        </OS>
+</EPAPlugins>
+
+<SleepTimeInSec=”15”>: Sleep interval between script running
+<Metrics>: kind of container for <metric> tag
+<Metric>: Specifies tags that provide information about metrics and where they can be collected from. Basically there are two types of metrics built in and user defined (See Metrics Management above).  Built in metrics are process metrics specified by keyword “Process” in “WilyResourceName” Tag. Everything else is considered user defined metrics.
+<WilyResourceName>: A descriptive name for the metrics being pulled. A “Process” identifier is a keyword indicating that user is interested in built in process metrics (availability, CPU Used %, memory Used %) for the process indicated under “ProcessNames” tag
+<ProcessNames>: It’s a necessary tag if WilyResourceName has “Process” identifier. This takes a lists of comma separated process names. 
+<CommandFile>: This tag is common to both built in metrics and user defined metrics. It specifies a perl file that allows users to define their own metrics.
+<Description>: is a comment section about the metrics.
+
+
+
+
