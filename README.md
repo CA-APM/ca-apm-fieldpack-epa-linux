@@ -65,5 +65,7 @@ If you wish to contribute to this or any other project, please refer to easy ins
 Change log
 Changes for each version of the field pack.
 
-Version	Author		Comment
-1.0	srikant Noorani	First version of the field pack.
+
+Version | Author | Comment
+--------|--------|--------
+1.0 | srikant.noorani@ca.com | First version of the field pack.
